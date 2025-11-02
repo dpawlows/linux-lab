@@ -5,6 +5,7 @@ A repository for documenting my home Linux lab, built on **Pop!_OS** using **KVM
 ## Structure
 | Folder | Goal |
 |--------|-------|
+| `00-initial-setup` | git/git integration |
 | `01-core-infra/` | VM creation, networking and SSH config |
 | `02-services/` | Web, mail, databases, and monitoring services |
 | `03-automation/` | Ansible playbooks and config |
