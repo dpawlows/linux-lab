@@ -1,0 +1,42 @@
+---
+- name: Update APT cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+  become: yes
+
+- name: Install common packages
+  apt:
+    name: "{{ common_packages }}"
+    state: present
+  become: yes
+
+- name: Ensure OpenSSH server present
+  apt:
+    name: openssh-server
+    state: present
+  become: yes
+
+- name: Harden sshd_config
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^{{ item.key }}\\s+"
+    line: "{{ item.key }} {{ item.val }}"
+    backup: yes
+  loop:
+    - { key: 'PermitRootLogin',        val: '{{ ssh_hardening.permit_root_login }}' }
+    - { key: 'PasswordAuthentication', val: '{{ ssh_hardening.password_auth }}' }
+    - { key: 'PubkeyAuthentication',   val: '{{ ssh_hardening.pubkey_auth }}' }
+  notify: Restart ssh
+  become: yes
+
+- name: Allow SSH with UFW
+  ufw:
+    rule: allow
+    name: OpenSSH
+  become: yes
+
+- name: Enable UFW
+  ufw:
+    state: enabled
+  become: yes

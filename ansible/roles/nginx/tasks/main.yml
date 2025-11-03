@@ -1,0 +1,25 @@
+---
+# tasks file for roles/nginx
+
+- name: Install Nginx
+  apt:
+    name: nginx
+    state: present
+    update_cache: yes
+  become: yes
+
+- name: Enable and start Nginx
+  service:
+    name: nginx
+    state: started
+    enabled: yes
+  become: yes
+
+- name: Deploy default index page
+  copy:
+    content: "<h1>Welcome to {{ inventory_hostname }}</h1>"
+    dest: /var/www/html/index.html
+    owner: www-data
+    group: www-data
+    mode: '0644'
+  become: yes

@@ -1,0 +1,16 @@
+---
+# tasks file for roles/postgres
+
+- name: Install PostgreSQL
+  apt:
+    name: postgresql
+    state: present
+    update_cache: yes
+  become: yes
+
+- name: Ensure service is running
+  service:
+    name: postgresql
+    state: started
+    enabled: yes
+  become: yes

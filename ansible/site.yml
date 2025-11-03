@@ -1,0 +1,11 @@
+- name: Baseline config for all lab hosts
+  hosts: lab
+  become: yes
+  roles:
+    - baseline
+    
+- hosts: web
+  roles: [nginx]
+
+- hosts: db
+  roles: [postgres]

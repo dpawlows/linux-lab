@@ -1,0 +1,10 @@
+common_packages:
+  - curl
+  - vim
+  - git
+  - htop
+
+ssh_hardening:
+  permit_root_login: "no"
+  password_auth: "no"
+  pubkey_auth: "yes"
