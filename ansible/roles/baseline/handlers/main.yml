@@ -1,6 +1,31 @@
 ---
 - name: Restart ssh
-  service:
-    name: ssh
+  block:
+    - name: Validate sshd_config syntax
+      ansible.builtin.command: sshd -t -f /etc/ssh/sshd_config
+      register: sshd_check
+      changed_when: false
+
+    - name: Restart SSH service
+      ansible.builtin.service:
+        name: ssh
+        state: restarted
+  rescue:
+    - name: Show invalid sshd_config error
+      ansible.builtin.debug:
+        var: sshd_check.stderr
+    - name: Fail due to invalid sshd_config
+      ansible.builtin.fail:
+        msg: "Aborting: sshd_config validation failed."
+
+- name: Restart fail2ban
+  service:  
+    name: fail2ban
     state: restarted
-  become: yes
+
+- name: Restart unattended-upgrades
+  ansible.builtin.service:
+    name: unattended-upgrades
+    state: restarted
+
+

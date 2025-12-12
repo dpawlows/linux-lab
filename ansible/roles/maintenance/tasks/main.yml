@@ -1,0 +1,22 @@
+---
+# tasks file for roles/mainetnance
+
+- name: "Skip maintenance if disabled"
+  meta: end_play
+  when: not maintenance_enabled
+
+- name: "Include: verify (facts, sanity)"
+  import_tasks: verify.yml
+  tags: [maintenance, verify]
+
+- name: "Include: upgrade (packages)"
+  import_tasks: upgrade.yml
+  tags: [maintenance, upgrade]
+
+- name: "Include: cleanup (autoremove, autoclean)"
+  import_tasks: cleanup.yml
+  tags: [maintenance, cleanup]
+
+- name: "Include: reboot if required"
+  import_tasks: reboot.yml
+  tags: [maintenance, reboot]

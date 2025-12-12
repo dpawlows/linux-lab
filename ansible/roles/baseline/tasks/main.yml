@@ -11,11 +11,43 @@
     state: present
   become: yes
 
-- name: Ensure OpenSSH server present
+- name: Ensure security packages is up to date
   apt:
-    name: openssh-server
+    name: "{{ security_packages }}"
+    state: latest
+    update_cache: yes
+
+
+- name: Ensure admin users exist
+  user:
+    name: "{{ item.name }}"
+    groups: "{{ item.groups | default([]) }}"
+    shell: "{{ item.shell | default('/bin/bash') }}"
     state: present
-  become: yes
+    create_home: yes
+  loop: "{{ baseline_users }}"
+
+- name: Install authorized_keys
+  authorized_key:
+    user: "{{ item.name }}"
+    key: "{{ item.ssh_key }}"
+    state: present
+  loop: "{{ baseline_users }}"
+  when: item.ssh_key is defined
+
+- name: Ensure sudo group requires no TTY (optional)
+  lineinfile:
+    path: /etc/sudoers
+    regexp: '^Defaults\s+requiretty'
+    state: absent
+    validate: 'visudo -cf %s'
+
+- name: Ensure chrony is installed and enabled
+  apt: { name: chrony, state: present }
+- service: { name: chrony, state: started, enabled: true }
+
+- name: Set timezone
+  timezone: { name: America/Detroit }
 
 - name: Harden sshd_config
   lineinfile:
@@ -30,13 +62,97 @@
   notify: Restart ssh
   become: yes
 
+- name: Ensure firewall package is installed
+  apt:
+    name: "{{ firewall_package }}"
+    state: present
+
+- name: Reset UFW and disable logging
+  community.general.ufw: 
+    state: reset
+    logging: off 
+
+- name: Default deny incoming
+  community.general.ufw:
+    direction: incoming
+    policy: deny
+  become: yes
+
+- name: Default allow outgoing
+  community.general.ufw:
+    direction: outgoing
+    policy: allow
+  become: yes
+
 - name: Allow SSH with UFW
-  ufw:
-    rule: allow
+  community.general.ufw:
+    rule: limit
     name: OpenSSH
   become: yes
 
 - name: Enable UFW
-  ufw:
+  community.general.ufw:
     state: enabled
   become: yes
+
+
+- name: Install fail2ban
+  apt: { name: fail2ban, state: present }
+
+- name: Minimal jail for sshd
+  copy:
+    dest: /etc/fail2ban/jail.d/sshd.local
+    content: |
+      [sshd]
+      enabled = true
+      bantime = 1h
+      maxretry = 5
+      findtime = 10m
+  notify: Restart fail2ban
+
+- name: Install qemu-guest-agent
+  apt: { name: qemu-guest-agent, state: present }
+- service: { name: qemu-guest-agent, state: started, enabled: true }
+
+# --- Install and configure unattended-upgrades ----------------------
+
+- name: Ensure unattended-upgrades is installed
+  ansible.builtin.apt:
+    name: unattended-upgrades
+    state: present
+    update_cache: yes
+
+- name: Enable unattended-upgrades service
+  ansible.builtin.systemd:
+    name: unattended-upgrades
+    enabled: true
+    state: started
+
+- name: Configure automatic security updates
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+      APT::Periodic::AutocleanInterval "7";
+      APT::Periodic::Verbose "0";
+
+- name: Configure security-only origin list
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/50unattended-upgrades
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      Unattended-Upgrade::Allowed-Origins {
+        "${distro_id}:${distro_codename}-security";
+        "${distro_idESMApps}:${distro_codename}-apps-security";
+        "${distro_idESM}:${distro_codename}-infra-security";
+      };
+      Unattended-Upgrade::Remove-Unused-Dependencies "true";
+      Unattended-Upgrade::Automatic-Reboot "true";
+      Unattended-Upgrade::Automatic-Reboot-Time "03:30";
+  notify: Restart unattended-upgrades

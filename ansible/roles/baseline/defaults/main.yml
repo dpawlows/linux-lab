@@ -1,0 +1,27 @@
+---
+baseline_users:
+  - name: dpawlows
+    groups: [sudo]
+    ssh_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJqB4UHaN0oSJEh6ywRC4tkIservjUd3L8V04opeitLh dpawlows@pop-os"
+    shell: /bin/bash
+
+common_packages:
+  - vim
+  - emacs
+  - curl
+  - git
+  - htop
+  - net-tools
+
+firewall_package:
+  - ufw
+
+ssh_hardening:
+  permit_root_login: "no"
+  password_auth: "no"
+  pubkey_auth: "yes"
+
+security_packages:
+  - openssh-server
+  - openssl
+  - sudo

@@ -1,0 +1,18 @@
+---
+# defaults file for roles/mainetnance
+
+# What kind of upgrade to run: "safe" (aka apt upgrade) or "dist"
+maintenance_apt_upgrade_type: "dist"   # "safe" | "dist"
+maintenance_update_cache: true
+maintenance_autoremove: true
+maintenance_autoclean: true
+
+# Reboot behavior
+maintenance_allow_reboot: true
+maintenance_reboot_timeout: 900        # seconds
+maintenance_pre_reboot_delay: 0
+maintenance_post_reboot_delay: 10
+
+# Safety toggles
+maintenance_enabled: true              # set false to skip the role entirely
+maintenance_only_security: false       # if true, install security updates only (Ubuntu)

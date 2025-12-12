@@ -1,0 +1,25 @@
+---
+# Optional path: security-only (Ubuntu). Uses unattended-upgrades rules:
+- name: Install only security updates (Ubuntu)
+  ansible.builtin.apt:
+    update_cache: "{{ maintenance_update_cache }}"
+    upgrade: safe
+  when: maintenance_only_security | bool
+  register: maintenance_upgrade_security
+  notify: []
+
+# General path: full upgrade
+- name: Full upgrade (safe/dist)
+  ansible.builtin.apt:
+    update_cache: "{{ maintenance_update_cache }}"
+    upgrade: "{{ 'dist' if maintenance_apt_upgrade_type == 'dist' else 'safe' }}"
+  when: not maintenance_only_security | bool
+  register: maintenance_upgrade_general
+
+# Optional: record what changed 
+- name: Autoremove old kernels/libs (only if enabled)
+  ansible.builtin.apt:
+    autoremove: yes
+  when: maintenance_autoremove | bool and not ansible_check_mode
+  register: maintenance_autoremove_result
+  changed_when: maintenance_autoremove_result.changed | default(false)

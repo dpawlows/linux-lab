@@ -1,0 +1,7 @@
+---
+- name: Autoclean apt cache (optional)
+  ansible.builtin.apt:
+    autoclean: yes
+  when: maintenance_autoclean | bool and not ansible_check_mode
+  register: maintenance_autoclean_result
+  changed_when: maintenance_autoclean_result.changed | default(false)

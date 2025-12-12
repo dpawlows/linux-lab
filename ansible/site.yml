@@ -9,3 +9,13 @@
 
 - hosts: db
   roles: [postgres]
+
+
+- name: Scheduled maintenance
+  hosts: lab
+  become: yes
+  roles:
+    - role: maintenance
+      vars:
+        maintenance_apt_upgrade_type: "dist"
+        maintenance_allow_reboot: true

@@ -1,0 +1,34 @@
+---
+# Refresh reboot-needed status after upgrades
+- name: Re-check reboot-required file
+  ansible.builtin.stat:
+    path: /var/run/reboot-required
+  register: maintenance_reboot_flag_after
+
+- name: "Update fact: maintenance_reboot_needed"
+  ansible.builtin.set_fact:
+    maintenance_reboot_needed: "{{ ansible_facts.get('reboot_required', false) or maintenance_reboot_flag_after.stat.exists | default(false) }}"
+  changed_when: false
+
+- name: Reboot if required and allowed
+  ansible.builtin.reboot:
+    msg: "Rebooting due to package upgrades"
+    connect_timeout: 30
+    reboot_timeout: "{{ maintenance_reboot_timeout }}"
+    pre_reboot_delay: "{{ maintenance_pre_reboot_delay }}"
+    post_reboot_delay: "{{ maintenance_post_reboot_delay }}"
+  when:
+    - maintenance_allow_reboot | bool
+    - maintenance_reboot_needed | bool
+  # In check mode, just report what would happen
+  check_mode: no
+
+- name: Get boot time
+  command: uptime -s
+  register: boot_time
+  changed_when: false    # This task should never report changed
+
+- name: Show reboot confirmation
+  debug:
+    msg: "{{ inventory_hostname }} rebooted at: {{ boot_time.stdout }}"
+  changed_when: false

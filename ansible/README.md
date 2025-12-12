@@ -49,6 +49,20 @@ Secrets go in Ansible Vault (e.g., group_vars/lab_vault.yml) and referenced like
 
 Top level playbook that specifies which roles apply to which groups. In a real production setting, it is common to have a playbooks folder with multiple playbooks defined. For example, in addition to `site.yml` there may be a `baseline.yml` and `apps.yml` to separate system configuration from app-level tasks. Here, we simply have a single playbook and multiple plays.
 
+An example play:
+```
+- name: Baseline config for all lab hosts
+  hosts: lab
+  become: yes
+  roles:
+    - baseline
+```
+
+- hosts:lab -> applies to all hosts in the group [lab], defined in inventory.ini.
+- become:yes -> escalate privileges (sudo)
+- roles: -baseline -> run everything in the roles/baseline directory (tasks, hanlers, templates, vars, etc.)
+
+
 ### tasks/main.yml
 
 Finally, I define the tasks that the baseline role performs. This is a reusable, idempotent, system state.
@@ -91,9 +105,23 @@ And if there are no errors, run it for real:
 
 The `-K` is necessary so that we provide the hosts sudoer password, unless we have configured passwordless sudo, which seems bad.
 
-## ansible-galaxy
 
-ansible-galaxy is a tool that can perform several role and collection related operations. First, we use it to help scaffold standard subfolders for our roles:
+## Permissions
+
+Running 
+
+`ansible-playbook site.yml --check`
+
+Can throws a fatal error:
+
+`fatal: [lab-srv1]: FAILED! => {"msg": "Missing sudo password"}`
+
+This does **not** mean that `ansible-playbook` should be run using sudo. Instead, there are some tasks that require sudo privileges on the guests themselves. So, this may be an indication that the user doesn't have sudo privileges. Log into the guests and confirm/fix.
+
+## Helpful ansible related commands
+### ansible-galaxy
+
+ansible-galaxy is a tool that can perform several role and collection related operations, including grabbing community-based collections. First, we use it to help scaffold standard subfolders for our roles:
 
 ```
 ansible-galaxy init roles/nginx
@@ -112,21 +140,7 @@ However, this command is used to show all roles that are installed system-wide *
 
 but this seems redundant as a simple `ls` can accomplish the same thing.
 
-
-## Permissions
-
-Running 
-
-`ansible-playbook site.yml --check`
-
-Can throws a fatal error:
-
-`fatal: [lab-srv1]: FAILED! => {"msg": "Missing sudo password"}`
-
-This does **not** mean that `ansible-playbook` should be run using sudo. Instead, there are some tasks that require sudo privileges on the guests themselves. So, this may be an indication that the user doesn't have sudo privileges. Log into the guests and confirm/fix.
-
-
-## ansible-inventory
+### ansible-inventory
 
 Can help quickly visualize the project:
 ```
@@ -143,4 +157,13 @@ Can help quickly visualize the project:
   ```
 
   We see the schema as defined in `inventory.ini`. 2 hosts that are part of the lab pool; one dedicated to web services and the other to the db.
+
+## Tasks
+The core of the ansible playbook are the plays, which run a set of tasks. Each task uses an ansible module to run a python code via ssh. Information on each module can be found with
+
+`ansible-doc modulename`
+
+### A note on security updates
+
+Non-critical upgrades to packages are typically handled during scheduled maintenance periods following a testing in staging first. Security patches, on the otherhand, should be applied as soon as possible. For this reason, it is common to install unattended-upgrades for these.
 
